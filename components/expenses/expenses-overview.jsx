@@ -1,9 +1,26 @@
-"use client"
+"use client";
 
-import { Wallet, TrendingDown, TrendingUp, PieChart } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { formatCurrency } from "@/lib/utils"
-import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, Legend, Tooltip } from "recharts"
+import {
+  Wallet,
+  TrendingDown,
+  TrendingUp,
+  PieChart,
+} from "lucide-react";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { formatCurrency } from "@/lib/utils";
+import {
+  PieChart as RechartsPie,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Legend,
+  Tooltip,
+} from "recharts";
 
 const categoryColors = {
   rent: "#6366f1",
@@ -14,25 +31,35 @@ const categoryColors = {
   maintenance: "#8b5cf6",
   transport: "#10b981",
   other: "#6b7280",
-}
+};
 
-export default function ExpensesOverview({ totalExpenses, monthlyExpenses, monthlyRevenue, expenses }) {
-  const profit = monthlyRevenue - monthlyExpenses
+export default function ExpensesOverview({
+  totalExpenses,
+  monthlyExpenses,
+  monthlyRevenue,
+  expenses,
+}) {
+  const profit = monthlyRevenue - monthlyExpenses;
 
-  // Group expenses by category for pie chart
+  // Group expenses by category
   const categoryData = expenses.reduce((acc, expense) => {
-    const existing = acc.find((item) => item.name === expense.category)
+    const existing = acc.find(
+      (item) => item.name === expense.category
+    );
+
     if (existing) {
-      existing.value += expense.amount
+      existing.value += expense.amount;
     } else {
       acc.push({
         name: expense.category,
         value: expense.amount,
-        color: categoryColors[expense.category] || "#6b7280",
-      })
+        color:
+          categoryColors[expense.category] ||
+          "#6b7280",
+      });
     }
-    return acc
-  }, [])
+    return acc;
+  }, []);
 
   return (
     <div className="space-y-6">
@@ -44,26 +71,40 @@ export default function ExpensesOverview({ totalExpenses, monthlyExpenses, month
               <Wallet className="h-6 w-6 text-destructive" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{formatCurrency(totalExpenses)}</p>
-              <p className="text-sm text-muted-foreground">Total Expenses</p>
+              <p className="text-2xl font-bold">
+                {formatCurrency(totalExpenses)}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                Total Expenses
+              </p>
             </div>
           </CardContent>
         </Card>
+
         <Card>
           <CardContent className="flex items-center gap-4 p-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-warning/10">
               <TrendingDown className="h-6 w-6 text-warning" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{formatCurrency(monthlyExpenses)}</p>
-              <p className="text-sm text-muted-foreground">This Month</p>
+              <p className="text-2xl font-bold">
+                {formatCurrency(monthlyExpenses)}
+              </p>
+              <p className="text-sm text-muted-foreground">
+                This Month
+              </p>
             </div>
           </CardContent>
         </Card>
+
         <Card>
           <CardContent className="flex items-center gap-4 p-4">
             <div
-              className={`flex h-12 w-12 items-center justify-center rounded-lg ${profit >= 0 ? "bg-success/10" : "bg-destructive/10"}`}
+              className={`flex h-12 w-12 items-center justify-center rounded-lg ${
+                profit >= 0
+                  ? "bg-success/10"
+                  : "bg-destructive/10"
+              }`}
             >
               {profit >= 0 ? (
                 <TrendingUp className="h-6 w-6 text-success" />
@@ -72,16 +113,26 @@ export default function ExpensesOverview({ totalExpenses, monthlyExpenses, month
               )}
             </div>
             <div>
-              <p className={`text-2xl font-bold ${profit >= 0 ? "text-success" : "text-destructive"}`}>
+              <p
+                className={`text-2xl font-bold ${
+                  profit >= 0
+                    ? "text-success"
+                    : "text-destructive"
+                }`}
+              >
                 {formatCurrency(Math.abs(profit))}
               </p>
-              <p className="text-sm text-muted-foreground">{profit >= 0 ? "Net Profit" : "Net Loss"}</p>
+              <p className="text-sm text-muted-foreground">
+                {profit >= 0
+                  ? "Net Profit"
+                  : "Net Loss"}
+              </p>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Pie Chart */}
+      {/* Expense Breakdown */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -89,10 +140,14 @@ export default function ExpensesOverview({ totalExpenses, monthlyExpenses, month
             Expense Breakdown
           </CardTitle>
         </CardHeader>
+
         <CardContent>
           {categoryData.length > 0 ? (
             <div className="h-[250px]">
-              <ResponsiveContainer width="100%" height="100%">
+              <ResponsiveContainer
+                width="100%"
+                height="100%"
+              >
                 <RechartsPie>
                   <Pie
                     data={categoryData}
@@ -102,14 +157,25 @@ export default function ExpensesOverview({ totalExpenses, monthlyExpenses, month
                     outerRadius={90}
                     paddingAngle={2}
                     dataKey="value"
-                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                    label={({ name, percent }) =>
+                      `${name} ${(percent * 100).toFixed(0)}%`
+                    }
                     labelLine={false}
                   >
-                    {categoryData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
+                    {categoryData.map(
+                      (entry, index) => (
+                        <Cell
+                          key={`cell-${index}`}
+                          fill={entry.color}
+                        />
+                      )
+                    )}
                   </Pie>
-                  <Tooltip formatter={(value) => formatCurrency(value)} />
+                  <Tooltip
+                    formatter={(value) =>
+                      formatCurrency(value)
+                    }
+                  />
                   <Legend />
                 </RechartsPie>
               </ResponsiveContainer>
@@ -122,5 +188,5 @@ export default function ExpensesOverview({ totalExpenses, monthlyExpenses, month
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }

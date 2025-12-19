@@ -1,9 +1,14 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import ShopSettings from "@/components/settings/shop-settings"
-import ReceiptSettings from "@/components/settings/receipt-settings"
+import { useState, useEffect } from "react";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import ShopSettings from "@/components/settings/shop-settings";
+import ReceiptSettings from "@/components/settings/receipt-settings";
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState({
@@ -16,40 +21,42 @@ export default function SettingsPage() {
     receiptFooter: "Thank you for shopping with us!",
     showLogo: true,
     showGstin: true,
-  })
-  const [loading, setLoading] = useState(true)
-  const [saving, setSaving] = useState(false)
+  });
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchSettings()
-  }, [])
+    fetchSettings();
+  }, []);
 
   async function fetchSettings() {
     try {
-      const res = await fetch("/api/settings")
-      const data = await res.json()
+      const res = await fetch("/api/settings");
+      const data = await res.json();
+
       if (data && Object.keys(data).length > 0) {
-        setSettings({ ...settings, ...data })
+        setSettings((prev) => ({ ...prev, ...data }));
       }
     } catch (error) {
-      console.error("Error fetching settings:", error)
+      console.error("Error fetching settings:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   async function handleSave() {
-    setSaving(true)
+    setSaving(true);
     try {
       await fetch("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(settings),
-      })
+      });
     } catch (error) {
-      console.error("Error saving settings:", error)
+      console.error("Error saving settings:", error);
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
   }
 
@@ -58,14 +65,17 @@ export default function SettingsPage() {
       <div className="flex h-full items-center justify-center">
         <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
       </div>
-    )
+    );
   }
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div>
         <h1 className="text-2xl font-bold">Settings</h1>
-        <p className="text-muted-foreground">Manage your shop and receipt settings</p>
+        <p className="text-muted-foreground">
+          Manage your shop and receipt settings
+        </p>
       </div>
 
       <Tabs defaultValue="shop" className="space-y-6">
@@ -75,13 +85,23 @@ export default function SettingsPage() {
         </TabsList>
 
         <TabsContent value="shop">
-          <ShopSettings settings={settings} setSettings={setSettings} onSave={handleSave} saving={saving} />
+          <ShopSettings
+            settings={settings}
+            setSettings={setSettings}
+            onSave={handleSave}
+            saving={saving}
+          />
         </TabsContent>
 
         <TabsContent value="receipt">
-          <ReceiptSettings settings={settings} setSettings={setSettings} onSave={handleSave} saving={saving} />
+          <ReceiptSettings
+            settings={settings}
+            setSettings={setSettings}
+            onSave={handleSave}
+            saving={saving}
+          />
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }

@@ -1,7 +1,14 @@
-import Link from "next/link"
-import { Mail } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import Link from "next/link";
+import { Mail } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default function CheckEmailPage() {
   return (
@@ -16,11 +23,13 @@ export default function CheckEmailPage() {
             {"We've sent you a confirmation link. Please check your email to verify your account."}
           </CardDescription>
         </CardHeader>
+
         <CardContent>
           <p className="text-sm text-muted-foreground">
             {"Didn't receive the email? Check your spam folder or try signing up again."}
           </p>
         </CardContent>
+
         <CardFooter className="flex flex-col gap-4">
           <Link href="/auth/login" className="w-full">
             <Button variant="outline" className="w-full bg-transparent">
@@ -30,5 +39,5 @@ export default function CheckEmailPage() {
         </CardFooter>
       </Card>
     </div>
-  )
+  );
 }

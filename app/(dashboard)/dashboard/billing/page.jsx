@@ -1,42 +1,51 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import BillingPOS from "@/components/billing/billing-pos"
-import BillPreview from "@/components/billing/bill-preview"
+import { useState, useEffect } from "react";
+import BillingPOS from "@/components/billing/billing-pos";
+import BillPreview from "@/components/billing/bill-preview";
 
 export default function BillingPage() {
-  const [products, setProducts] = useState([])
-  const [cart, setCart] = useState([])
-  const [customerName, setCustomerName] = useState("")
-  const [customerPhone, setCustomerPhone] = useState("")
-  const [paymentMode, setPaymentMode] = useState("cash")
-  const [discount, setDiscount] = useState(0)
-  const [cashReceived, setCashReceived] = useState("")
-  const [showPreview, setShowPreview] = useState(false)
-  const [completedBill, setCompletedBill] = useState(null)
-  const [loading, setLoading] = useState(true)
+  const [products, setProducts] = useState([]);
+  const [cart, setCart] = useState([]);
+  const [customerName, setCustomerName] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
+  const [paymentMode, setPaymentMode] = useState("cash");
+  const [discount, setDiscount] = useState(0);
+  const [cashReceived, setCashReceived] = useState("");
+  const [showPreview, setShowPreview] = useState(false);
+  const [completedBill, setCompletedBill] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchProducts()
-  }, [])
+    fetchProducts();
+  }, []);
 
   async function fetchProducts() {
     try {
-      const res = await fetch("/api/products")
-      const data = await res.json()
-      setProducts(data.filter((p) => p.stock > 0))
+      const res = await fetch("/api/products");
+      const data = await res.json();
+      setProducts(data.filter((p) => p.stock > 0));
     } catch (error) {
-      console.error("Error fetching products:", error)
+      console.error("Error fetching products:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   function addToCart(product) {
-    const existing = cart.find((item) => item.productId === product._id)
+    const existing = cart.find(
+      (item) => item.productId === product._id
+    );
+
     if (existing) {
       if (existing.quantity < product.stock) {
-        setCart(cart.map((item) => (item.productId === product._id ? { ...item, quantity: item.quantity + 1 } : item)))
+        setCart(
+          cart.map((item) =>
+            item.productId === product._id
+              ? { ...item, quantity: item.quantity + 1 }
+              : item
+          )
+        );
       }
     } else {
       setCart([
@@ -48,36 +57,46 @@ export default function BillingPage() {
           quantity: 1,
           maxStock: product.stock,
         },
-      ])
+      ]);
     }
   }
 
   function updateQuantity(productId, quantity) {
     if (quantity <= 0) {
-      setCart(cart.filter((item) => item.productId !== productId))
+      setCart(cart.filter((item) => item.productId !== productId));
     } else {
-      setCart(cart.map((item) => (item.productId === productId ? { ...item, quantity } : item)))
+      setCart(
+        cart.map((item) =>
+          item.productId === productId
+            ? { ...item, quantity }
+            : item
+        )
+      );
     }
   }
 
   function removeFromCart(productId) {
-    setCart(cart.filter((item) => item.productId !== productId))
+    setCart(cart.filter((item) => item.productId !== productId));
   }
 
   function clearCart() {
-    setCart([])
-    setCustomerName("")
-    setCustomerPhone("")
-    setDiscount(0)
-    setCashReceived("")
+    setCart([]);
+    setCustomerName("");
+    setCustomerPhone("");
+    setDiscount(0);
+    setCashReceived("");
   }
 
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.quantity, 0)
-  const discountAmount = (subtotal * discount) / 100
-  const total = subtotal - discountAmount
+  const subtotal = cart.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+
+  const discountAmount = (subtotal * discount) / 100;
+  const total = subtotal - discountAmount;
 
   async function completeSale() {
-    const billNumber = `BIL${Date.now().toString(36).toUpperCase()}`
+    const billNumber = `BIL${Date.now().toString(36).toUpperCase()}`;
 
     const transaction = {
       billNumber,
@@ -89,26 +108,32 @@ export default function BillingPage() {
       discountAmount,
       total,
       paymentMode,
-      cashReceived: paymentMode === "cash" ? Number.parseFloat(cashReceived) || total : total,
-      change: paymentMode === "cash" ? (Number.parseFloat(cashReceived) || total) - total : 0,
+      cashReceived:
+        paymentMode === "cash"
+          ? parseFloat(cashReceived) || total
+          : total,
+      change:
+        paymentMode === "cash"
+          ? (parseFloat(cashReceived) || total) - total
+          : 0,
       status: "completed",
-    }
+    };
 
     try {
       const res = await fetch("/api/transactions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(transaction),
-      })
+      });
 
       if (res.ok) {
-        setCompletedBill(transaction)
-        setShowPreview(true)
-        clearCart()
-        fetchProducts()
+        setCompletedBill(transaction);
+        setShowPreview(true);
+        clearCart();
+        fetchProducts();
       }
     } catch (error) {
-      console.error("Error completing sale:", error)
+      console.error("Error completing sale:", error);
     }
   }
 
@@ -138,7 +163,11 @@ export default function BillingPage() {
         onCompleteSale={completeSale}
       />
 
-      <BillPreview bill={completedBill} open={showPreview} onOpenChange={setShowPreview} />
+      <BillPreview
+        bill={completedBill}
+        open={showPreview}
+        onOpenChange={setShowPreview}
+      />
     </div>
-  )
+  );
 }

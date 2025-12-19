@@ -1,13 +1,28 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Plus, Search, Package, AlertTriangle, CheckCircle, XCircle } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import ProductsTable from "@/components/products/products-table"
-import AddProductDialog from "@/components/products/add-product-dialog"
+import { useState, useEffect } from "react";
+import {
+  Plus,
+  Search,
+  Package,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+} from "lucide-react";
+
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+import ProductsTable from "@/components/products/products-table";
+import AddProductDialog from "@/components/products/add-product-dialog";
 
 const categories = [
   "All",
@@ -19,54 +34,66 @@ const categories = [
   "Household",
   "Electronics",
   "Other",
-]
+];
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState("")
-  const [category, setCategory] = useState("all")
-  const [stockStatus, setStockStatus] = useState("all")
-  const [showAddDialog, setShowAddDialog] = useState(false)
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [category, setCategory] = useState("all");
+  const [stockStatus, setStockStatus] = useState("all");
+  const [showAddDialog, setShowAddDialog] = useState(false);
 
   useEffect(() => {
-    fetchProducts()
-  }, [category, stockStatus])
+    fetchProducts();
+  }, [category, stockStatus]);
 
   async function fetchProducts() {
     try {
-      const params = new URLSearchParams()
-      if (category !== "all") params.append("category", category)
-      if (stockStatus !== "all") params.append("status", stockStatus)
+      const params = new URLSearchParams();
+      if (category !== "all") params.append("category", category);
+      if (stockStatus !== "all") params.append("status", stockStatus);
 
-      const res = await fetch(`/api/products?${params}`)
-      const data = await res.json()
-      setProducts(data)
+      const res = await fetch(`/api/products?${params.toString()}`);
+      const data = await res.json();
+      setProducts(data);
     } catch (error) {
-      console.error("Error fetching products:", error)
+      console.error("Error fetching products:", error);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
   }
 
   const filteredProducts = products.filter(
-    (p) => p.name?.toLowerCase().includes(search.toLowerCase()) || p.sku?.toLowerCase().includes(search.toLowerCase()),
-  )
+    (p) =>
+      p.name?.toLowerCase().includes(search.toLowerCase()) ||
+      p.sku?.toLowerCase().includes(search.toLowerCase())
+  );
 
   const stats = {
     total: products.length,
-    inStock: products.filter((p) => p.stock > p.lowStockThreshold).length,
-    lowStock: products.filter((p) => p.stock > 0 && p.stock <= p.lowStockThreshold).length,
+    inStock: products.filter(
+      (p) => p.stock > p.lowStockThreshold
+    ).length,
+    lowStock: products.filter(
+      (p) => p.stock > 0 && p.stock <= p.lowStockThreshold
+    ).length,
     outOfStock: products.filter((p) => p.stock === 0).length,
-    totalValue: products.reduce((sum, p) => sum + p.price * p.stock, 0),
-  }
+    totalValue: products.reduce(
+      (sum, p) => sum + p.price * p.stock,
+      0
+    ),
+  };
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Products</h1>
-          <p className="text-muted-foreground">Manage your inventory and product catalog</p>
+          <p className="text-muted-foreground">
+            Manage your inventory and product catalog
+          </p>
         </div>
         <Button onClick={() => setShowAddDialog(true)}>
           <Plus className="mr-2 h-4 w-4" />
@@ -83,10 +110,13 @@ export default function ProductsPage() {
             </div>
             <div>
               <p className="text-2xl font-bold">{stats.total}</p>
-              <p className="text-sm text-muted-foreground">Total Products</p>
+              <p className="text-sm text-muted-foreground">
+                Total Products
+              </p>
             </div>
           </CardContent>
         </Card>
+
         <Card>
           <CardContent className="flex items-center gap-4 p-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-success/10">
@@ -94,10 +124,13 @@ export default function ProductsPage() {
             </div>
             <div>
               <p className="text-2xl font-bold">{stats.inStock}</p>
-              <p className="text-sm text-muted-foreground">In Stock</p>
+              <p className="text-sm text-muted-foreground">
+                In Stock
+              </p>
             </div>
           </CardContent>
         </Card>
+
         <Card>
           <CardContent className="flex items-center gap-4 p-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-warning/10">
@@ -105,10 +138,13 @@ export default function ProductsPage() {
             </div>
             <div>
               <p className="text-2xl font-bold">{stats.lowStock}</p>
-              <p className="text-sm text-muted-foreground">Low Stock</p>
+              <p className="text-sm text-muted-foreground">
+                Low Stock
+              </p>
             </div>
           </CardContent>
         </Card>
+
         <Card>
           <CardContent className="flex items-center gap-4 p-4">
             <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-destructive/10">
@@ -116,7 +152,9 @@ export default function ProductsPage() {
             </div>
             <div>
               <p className="text-2xl font-bold">{stats.outOfStock}</p>
-              <p className="text-sm text-muted-foreground">Out of Stock</p>
+              <p className="text-sm text-muted-foreground">
+                Out of Stock
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -135,19 +173,27 @@ export default function ProductsPage() {
                 className="pl-9"
               />
             </div>
+
             <Select value={category} onValueChange={setCategory}>
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Category" />
               </SelectTrigger>
               <SelectContent>
                 {categories.map((cat) => (
-                  <SelectItem key={cat} value={cat.toLowerCase()}>
+                  <SelectItem
+                    key={cat}
+                    value={cat.toLowerCase()}
+                  >
                     {cat}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
-            <Select value={stockStatus} onValueChange={setStockStatus}>
+
+            <Select
+              value={stockStatus}
+              onValueChange={setStockStatus}
+            >
               <SelectTrigger className="w-[180px]">
                 <SelectValue placeholder="Stock Status" />
               </SelectTrigger>
@@ -163,17 +209,21 @@ export default function ProductsPage() {
       </Card>
 
       {/* Products Table */}
-      <ProductsTable products={filteredProducts} loading={loading} onRefresh={fetchProducts} />
+      <ProductsTable
+        products={filteredProducts}
+        loading={loading}
+        onRefresh={fetchProducts}
+      />
 
       {/* Add Product Dialog */}
       <AddProductDialog
         open={showAddDialog}
         onOpenChange={setShowAddDialog}
         onSuccess={() => {
-          setShowAddDialog(false)
-          fetchProducts()
+          setShowAddDialog(false);
+          fetchProducts();
         }}
       />
     </div>
-  )
+  );
 }
