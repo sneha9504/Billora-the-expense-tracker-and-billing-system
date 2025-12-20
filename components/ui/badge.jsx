@@ -1,7 +1,8 @@
+'use client'
+
 import * as React from 'react'
 import { Slot } from '@radix-ui/react-slot'
-import { cva, type VariantProps } from 'class-variance-authority'
-
+import { cva } from 'class-variance-authority'
 import { cn } from '@/lib/utils'
 
 const badgeVariants = cva(
@@ -22,16 +23,10 @@ const badgeVariants = cva(
     defaultVariants: {
       variant: 'default',
     },
-  },
+  }
 )
 
-function Badge({
-  className,
-  variant,
-  asChild = false,
-  ...props
-}: React.ComponentProps<'span'> &
-  VariantProps<typeof badgeVariants> & { asChild?: boolean }) {
+function Badge({ className, variant, asChild = false, ...props }) {
   const Comp = asChild ? Slot : 'span'
 
   return (
