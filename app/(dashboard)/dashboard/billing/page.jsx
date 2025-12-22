@@ -1,173 +1,55 @@
-"use client";
+import { createClient } from "@/lib/supabase/server"
+import { Header } from "@/components/dashboard/header"
+import { BillingPOS } from "@/components/billing/billing-pos"
 
-import { useState, useEffect } from "react";
-import BillingPOS from "@/components/billing/billing-pos";
-import BillPreview from "@/components/billing/bill-preview";
+export default async function BillingPage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-export default function BillingPage() {
-  const [products, setProducts] = useState([]);
-  const [cart, setCart] = useState([]);
-  const [customerName, setCustomerName] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
-  const [paymentMode, setPaymentMode] = useState("cash");
-  const [discount, setDiscount] = useState(0);
-  const [cashReceived, setCashReceived] = useState("");
-  const [showPreview, setShowPreview] = useState(false);
-  const [completedBill, setCompletedBill] = useState(null);
-  const [loading, setLoading] = useState(true);
+  // Get shop for user
+  const { data: shop } = await supabase
+    .from("shops")
+    .select("*")
+    .eq("user_id", user?.id)
+    .single()
 
-  useEffect(() => {
-    fetchProducts();
-  }, []);
+  let products = []
 
-  async function fetchProducts() {
-    try {
-      const res = await fetch("/api/products");
-      const data = await res.json();
-      setProducts(data.filter((p) => p.stock > 0));
-    } catch (error) {
-      console.error("Error fetching products:", error);
-    } finally {
-      setLoading(false);
+  if (shop?.id) {
+    const { data: productsData } = await supabase
+      .from("products")
+      .select(
+        "id, name, sku, barcode, category, brand, price, gst_percentage, stock, unit, image"
+      )
+      .eq("shop_id", shop.id)
+      .eq("is_active", true)
+      .gt("stock", 0)
+      .order("name")
+
+    if (productsData) {
+      products = productsData
     }
   }
 
-  function addToCart(product) {
-    const existing = cart.find(
-      (item) => item.productId === product._id
-    );
-
-    if (existing) {
-      if (existing.quantity < product.stock) {
-        setCart(
-          cart.map((item) =>
-            item.productId === product._id
-              ? { ...item, quantity: item.quantity + 1 }
-              : item
-          )
-        );
-      }
-    } else {
-      setCart([
-        ...cart,
-        {
-          productId: product._id,
-          name: product.name,
-          price: product.price,
-          quantity: 1,
-          maxStock: product.stock,
-        },
-      ]);
-    }
-  }
-
-  function updateQuantity(productId, quantity) {
-    if (quantity <= 0) {
-      setCart(cart.filter((item) => item.productId !== productId));
-    } else {
-      setCart(
-        cart.map((item) =>
-          item.productId === productId
-            ? { ...item, quantity }
-            : item
-        )
-      );
-    }
-  }
-
-  function removeFromCart(productId) {
-    setCart(cart.filter((item) => item.productId !== productId));
-  }
-
-  function clearCart() {
-    setCart([]);
-    setCustomerName("");
-    setCustomerPhone("");
-    setDiscount(0);
-    setCashReceived("");
-  }
-
-  const subtotal = cart.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0
-  );
-
-  const discountAmount = (subtotal * discount) / 100;
-  const total = subtotal - discountAmount;
-
-  async function completeSale() {
-    const billNumber = `BIL${Date.now().toString(36).toUpperCase()}`;
-
-    const transaction = {
-      billNumber,
-      customerName: customerName || "Walk-in Customer",
-      customerPhone,
-      items: cart,
-      subtotal,
-      discount,
-      discountAmount,
-      total,
-      paymentMode,
-      cashReceived:
-        paymentMode === "cash"
-          ? parseFloat(cashReceived) || total
-          : total,
-      change:
-        paymentMode === "cash"
-          ? (parseFloat(cashReceived) || total) - total
-          : 0,
-      status: "completed",
-    };
-
-    try {
-      const res = await fetch("/api/transactions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(transaction),
-      });
-
-      if (res.ok) {
-        setCompletedBill(transaction);
-        setShowPreview(true);
-        clearCart();
-        fetchProducts();
-      }
-    } catch (error) {
-      console.error("Error completing sale:", error);
-    }
-  }
+  // Get unique categories
+  const categories = [...new Set(products.map((p) => p.category))]
 
   return (
-    <div className="h-[calc(100vh-7rem)]">
-      <BillingPOS
-        products={products}
-        cart={cart}
-        loading={loading}
-        customerName={customerName}
-        customerPhone={customerPhone}
-        paymentMode={paymentMode}
-        discount={discount}
-        cashReceived={cashReceived}
-        subtotal={subtotal}
-        discountAmount={discountAmount}
-        total={total}
-        onAddToCart={addToCart}
-        onUpdateQuantity={updateQuantity}
-        onRemoveFromCart={removeFromCart}
-        onClearCart={clearCart}
-        onCustomerNameChange={setCustomerName}
-        onCustomerPhoneChange={setCustomerPhone}
-        onPaymentModeChange={setPaymentMode}
-        onDiscountChange={setDiscount}
-        onCashReceivedChange={setCashReceived}
-        onCompleteSale={completeSale}
+    <div className="flex h-screen flex-col">
+      <Header
+        title="Billing"
+        description="Process sales and generate invoices"
+        userEmail={user?.email}
       />
-
-      <BillPreview
-        bill={completedBill}
-        open={showPreview}
-        onOpenChange={setShowPreview}
-      />
+      <div className="flex-1 overflow-hidden">
+        <BillingPOS
+          products={products}
+          categories={categories}
+          shop={shop}
+        />
+      </div>
     </div>
-  );
+  )
 }

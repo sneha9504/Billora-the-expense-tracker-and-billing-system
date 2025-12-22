@@ -1,24 +1,17 @@
-"use client";
+"use client"
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts"
 
-export function BudgetProgress({
-  totalSpent,
-  totalRevenue,
-  savingsPercentage,
-}) {
-  const profit = totalRevenue - totalSpent;
+export function BudgetProgress({ totalSpent, totalRevenue, savingsPercentage }) {
+  const profit = totalRevenue - totalSpent
 
   const data = [
     { name: "Spent", value: totalSpent },
     { name: "Saved", value: profit > 0 ? profit : 0 },
-  ];
+  ]
 
-  const COLORS = [
-    "oklch(0.55 0.2 25)",   // spent
-    "oklch(0.6 0.18 145)", // saved
-  ];
+  const COLORS = ["oklch(0.55 0.2 25)", "oklch(0.6 0.18 145)"]
 
   return (
     <Card className="h-full">
@@ -28,6 +21,7 @@ export function BudgetProgress({
 
       <CardContent>
         <div className="flex flex-col items-center">
+          {/* Chart */}
           <div className="relative h-[180px] w-[180px]">
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
@@ -50,30 +44,26 @@ export function BudgetProgress({
               </PieChart>
             </ResponsiveContainer>
 
+            {/* Center Text */}
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-2xl font-bold text-card-foreground">
                 {savingsPercentage}%
               </span>
-              <span className="text-sm text-muted-foreground">
-                Saved
-              </span>
+              <span className="text-sm text-muted-foreground">Saved</span>
             </div>
           </div>
 
+          {/* Stats */}
           <div className="mt-4 grid grid-cols-2 gap-4 w-full">
             <div className="text-center">
-              <p className="text-sm text-muted-foreground">
-                Total Spent
-              </p>
+              <p className="text-sm text-muted-foreground">Total Spent</p>
               <p className="text-lg font-semibold text-destructive">
                 ₹{totalSpent.toLocaleString()}
               </p>
             </div>
 
             <div className="text-center">
-              <p className="text-sm text-muted-foreground">
-                Profit
-              </p>
+              <p className="text-sm text-muted-foreground">Profit</p>
               <p className="text-lg font-semibold text-success">
                 ₹{profit > 0 ? profit.toLocaleString() : 0}
               </p>
@@ -82,5 +72,5 @@ export function BudgetProgress({
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }

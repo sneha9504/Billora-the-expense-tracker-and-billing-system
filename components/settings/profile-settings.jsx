@@ -1,59 +1,62 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Loader2, User, Save, Key } from "lucide-react";
-import { toast } from "sonner";
+import { useState } from "react"
+import { useRouter } from "next/navigation"
+import { Loader2, User, Save, Key } from "lucide-react"
+import { toast } from "sonner"
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { createClient } from "@/lib/supabase/client";
+} from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { createClient } from "@/lib/supabase/client"
 
 export function ProfileSettings({ user }) {
-  const [passwordLoading, setPasswordLoading] = useState(false);
-  const router = useRouter();
+  const [loading, setLoading] = useState(false)
+  const [passwordLoading, setPasswordLoading] = useState(false)
+  const router = useRouter()
 
-  const [email] = useState(user?.email || "");
-  const [newPassword, setNewPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] = useState("");
+  const [email] = useState(user?.email || "")
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
 
-  async function handlePasswordChange(e) {
-    e.preventDefault();
+  const handlePasswordChange = async (e) => {
+    e.preventDefault()
 
     if (newPassword !== confirmPassword) {
-      toast.error("Passwords do not match");
-      return;
+      toast.error("Passwords do not match")
+      return
     }
 
     if (newPassword.length < 6) {
-      toast.error("Password must be at least 6 characters");
-      return;
+      toast.error("Password must be at least 6 characters")
+      return
     }
 
-    setPasswordLoading(true);
-    const supabase = createClient();
+    setPasswordLoading(true)
+    const supabase = createClient()
 
     const { error } = await supabase.auth.updateUser({
       password: newPassword,
-    });
+    })
 
     if (error) {
-      toast.error(error.message);
-      setPasswordLoading(false);
-      return;
+      toast.error(error.message)
+      setPasswordLoading(false)
+      return
     }
 
-    toast.success("Password updated successfully!");
-    setNewPassword("");
-    setConfirmPassword("");
-    setPasswordLoading(false);
+    toast.success("Password updated successfully!")
+    setCurrentPassword("")
+    setNewPassword("")
+    setConfirmPassword("")
+    setPasswordLoading(false)
   }
 
   return (
@@ -65,24 +68,33 @@ export function ProfileSettings({ user }) {
             <User className="h-5 w-5" />
             Profile Information
           </CardTitle>
-          <CardDescription>View your account details</CardDescription>
+          <CardDescription>
+            View your account details
+          </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Email Address</Label>
-            <Input value={email} disabled className="bg-muted" />
-            <p className="text-xs text-muted-foreground">
-              Email cannot be changed
-            </p>
-          </div>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Email Address</Label>
+              <Input
+                type="email"
+                value={email}
+                disabled
+                className="bg-muted"
+              />
+              <p className="text-xs text-muted-foreground">
+                Email cannot be changed
+              </p>
+            </div>
 
-          <div className="space-y-2">
-            <Label>User ID</Label>
-            <Input
-              value={user?.id || ""}
-              disabled
-              className="bg-muted font-mono text-sm"
-            />
+            <div className="space-y-2">
+              <Label>User ID</Label>
+              <Input
+                value={user?.id || ""}
+                disabled
+                className="bg-muted font-mono text-sm"
+              />
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -94,16 +106,23 @@ export function ProfileSettings({ user }) {
             <Key className="h-5 w-5" />
             Change Password
           </CardTitle>
-          <CardDescription>Update your account password</CardDescription>
+          <CardDescription>
+            Update your account password
+          </CardDescription>
         </CardHeader>
         <CardContent>
-          <form onSubmit={handlePasswordChange} className="space-y-4">
+          <form
+            onSubmit={handlePasswordChange}
+            className="space-y-4"
+          >
             <div className="space-y-2">
               <Label>New Password</Label>
               <Input
                 type="password"
                 value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
+                onChange={(e) =>
+                  setNewPassword(e.target.value)
+                }
                 placeholder="Enter new password"
                 required
                 minLength={6}
@@ -115,14 +134,20 @@ export function ProfileSettings({ user }) {
               <Input
                 type="password"
                 value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
+                onChange={(e) =>
+                  setConfirmPassword(e.target.value)
+                }
                 placeholder="Confirm new password"
                 required
                 minLength={6}
               />
             </div>
 
-            <Button type="submit" disabled={passwordLoading} className="gap-2">
+            <Button
+              type="submit"
+              disabled={passwordLoading}
+              className="gap-2"
+            >
               {passwordLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
               ) : (
@@ -134,5 +159,5 @@ export function ProfileSettings({ user }) {
         </CardContent>
       </Card>
     </div>
-  );
+  )
 }

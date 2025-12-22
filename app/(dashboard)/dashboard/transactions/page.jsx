@@ -1,181 +1,142 @@
-"use client"
+import { createClient } from "@/lib/supabase/server"
+import { Header } from "@/components/dashboard/header"
+import { TransactionsTable } from "@/components/transactions/transactions-table"
+import { CreditCard, DollarSign, Banknote, Smartphone } from "lucide-react"
 
-import { useState, useEffect } from "react"
-import { Receipt, IndianRupee, CreditCard, Banknote, Calendar } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
-import TransactionsTable from "@/components/transactions/transactions-table"
-import { formatCurrency, formatDate } from "@/lib/utils"
+export default async function TransactionsPage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-export default function TransactionsPage() {
-  const [transactions, setTransactions] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [paymentFilter, setPaymentFilter] = useState("all")
-  const [statusFilter, setStatusFilter] = useState("all")
-  const [dateRange, setDateRange] = useState({ from: null, to: null })
+  // Get shop for user
+  const { data: shop } = await supabase
+    .from("shops")
+    .select("*")
+    .eq("user_id", user?.id)
+    .single()
 
-  useEffect(() => {
-    fetchTransactions()
-  }, [paymentFilter, statusFilter, dateRange])
+  let transactions = []
 
-  async function fetchTransactions() {
-    try {
-      const params = new URLSearchParams()
-      if (paymentFilter !== "all") params.append("paymentMode", paymentFilter)
-      if (statusFilter !== "all") params.append("status", statusFilter)
-      if (dateRange.from) params.append("startDate", dateRange.from.toISOString())
-      if (dateRange.to) params.append("endDate", dateRange.to.toISOString())
+  if (shop?.id) {
+    const { data: transactionsData } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("shop_id", shop.id)
+      .order("created_at", { ascending: false })
 
-      const res = await fetch(`/api/transactions?${params}`)
-      const data = await res.json()
-      setTransactions(data)
-    } catch (error) {
-      console.error("Error fetching transactions:", error)
-    } finally {
-      setLoading(false)
+    if (transactionsData) {
+      transactions = transactionsData
     }
   }
 
-  const stats = {
-    total: transactions.length,
-    revenue: transactions.filter((t) => t.status === "completed").reduce((sum, t) => sum + t.total, 0),
-    cash: transactions
-      .filter((t) => t.paymentMode === "cash" && t.status === "completed")
-      .reduce((sum, t) => sum + t.total, 0),
-    online: transactions
-      .filter((t) => ["card", "upi"].includes(t.paymentMode) && t.status === "completed")
-      .reduce((sum, t) => sum + t.total, 0),
-  }
+  // Calculate stats
+  const totalTransactions = transactions.length
+
+  const totalRevenue = transactions
+    .filter((t) => t.status === "success")
+    .reduce((sum, t) => sum + Number(t.total_amount), 0)
+
+  const cashTotal = transactions
+    .filter(
+      (t) => t.payment_mode === "cash" && t.status === "success",
+    )
+    .reduce((sum, t) => sum + Number(t.total_amount), 0)
+
+  const onlineTotal = transactions
+    .filter(
+      (t) =>
+        (t.payment_mode === "card" || t.payment_mode === "upi") &&
+        t.status === "success",
+    )
+    .reduce((sum, t) => sum + Number(t.total_amount), 0)
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Transactions</h1>
-        <p className="text-muted-foreground">View and manage all your sales transactions</p>
-      </div>
+    <div className="flex flex-col">
+      <Header
+        title="Transactions"
+        description="View and manage your sales history"
+        userEmail={user?.email}
+      />
 
-      {/* Stats */}
-      <div className="grid gap-4 md:grid-cols-4">
-        <Card>
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-              <Receipt className="h-6 w-6 text-primary" />
+      <div className="p-6 space-y-6">
+        {/* Stats */}
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                <CreditCard className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Total Transactions
+                </p>
+                <p className="text-2xl font-bold text-card-foreground">
+                  {totalTransactions}
+                </p>
+              </div>
             </div>
-            <div>
-              <p className="text-2xl font-bold">{stats.total}</p>
-              <p className="text-sm text-muted-foreground">Total Transactions</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-success/10">
-              <IndianRupee className="h-6 w-6 text-success" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{formatCurrency(stats.revenue)}</p>
-              <p className="text-sm text-muted-foreground">Total Revenue</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-chart-4/10">
-              <Banknote className="h-6 w-6 text-chart-4" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{formatCurrency(stats.cash)}</p>
-              <p className="text-sm text-muted-foreground">Cash Collected</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="flex items-center gap-4 p-4">
-            <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-chart-3/10">
-              <CreditCard className="h-6 w-6 text-chart-3" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold">{formatCurrency(stats.online)}</p>
-              <p className="text-sm text-muted-foreground">Online Payments</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-4">
-            <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Payment Mode" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Payments</SelectItem>
-                <SelectItem value="cash">Cash</SelectItem>
-                <SelectItem value="card">Card</SelectItem>
-                <SelectItem value="upi">UPI</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="completed">Completed</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="cancelled">Cancelled</SelectItem>
-              </SelectContent>
-            </Select>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-[240px] justify-start text-left font-normal bg-transparent">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  {dateRange.from ? (
-                    dateRange.to ? (
-                      <>
-                        {formatDate(dateRange.from)} - {formatDate(dateRange.to)}
-                      </>
-                    ) : (
-                      formatDate(dateRange.from)
-                    )
-                  ) : (
-                    "Select date range"
-                  )}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  mode="range"
-                  selected={dateRange}
-                  onSelect={setDateRange}
-                  initialFocus
-                  numberOfMonths={2}
-                />
-              </PopoverContent>
-            </Popover>
-            {(dateRange.from || paymentFilter !== "all" || statusFilter !== "all") && (
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  setPaymentFilter("all")
-                  setStatusFilter("all")
-                  setDateRange({ from: null, to: null })
-                }}
-              >
-                Clear Filters
-              </Button>
-            )}
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Transactions Table */}
-      <TransactionsTable transactions={transactions} loading={loading} />
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-success/10 text-success">
+                <DollarSign className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Total Revenue
+                </p>
+                <p className="text-2xl font-bold text-card-foreground">
+                  ₹{totalRevenue.toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-chart-4/20 text-chart-4">
+                <Banknote className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Cash Collected
+                </p>
+                <p className="text-2xl font-bold text-card-foreground">
+                  ₹{cashTotal.toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-chart-3/20 text-chart-3">
+                <Smartphone className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Online Received
+                </p>
+                <p className="text-2xl font-bold text-card-foreground">
+                  ₹{onlineTotal.toLocaleString()}
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Transactions Table */}
+        <div className="rounded-xl border border-border bg-card">
+          <div className="p-4 border-b border-border">
+            <h2 className="text-lg font-semibold text-card-foreground">
+              Transaction History
+            </h2>
+          </div>
+          <TransactionsTable transactions={transactions} shop={shop} />
+        </div>
+      </div>
     </div>
   )
 }

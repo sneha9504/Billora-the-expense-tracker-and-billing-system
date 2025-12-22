@@ -1,49 +1,60 @@
-import { cn } from "@/lib/utils";
+import { cn } from "@/lib/utils"
 
-export default function StatsCard({
+export function StatsCard({
   title,
   value,
-  subtitle,
   icon: Icon,
   trend,
-  trendUp,
-  className,
+  variant = "default",
 }) {
+  const variantStyles = {
+    default: "bg-card",
+    success: "bg-success/10 border-success/20",
+    warning: "bg-warning/10 border-warning/20",
+    primary: "bg-primary/10 border-primary/20",
+  }
+
+  const iconStyles = {
+    default: "bg-muted text-muted-foreground",
+    success: "bg-success/20 text-success",
+    warning: "bg-warning/20 text-warning",
+    primary: "bg-primary/20 text-primary",
+  }
+
   return (
-    <div className={cn("rounded-xl border bg-card p-6", className)}>
-      <div className="flex items-start justify-between">
-        <div className="space-y-1">
-          <p className="text-sm font-medium text-muted-foreground">
+    <div className={cn("rounded-xl border p-6 shadow-sm", variantStyles[variant])}>
+      <div className="flex items-center justify-between">
+        <div>
+          <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
             {title}
           </p>
 
-          <p className="text-2xl font-bold">{value}</p>
-
-          {subtitle && (
-            <p className="text-xs text-muted-foreground">
-              {subtitle}
-            </p>
-          )}
+          <p className="mt-2 text-3xl font-bold text-card-foreground">
+            {value}
+          </p>
 
           {trend && (
             <p
               className={cn(
-                "text-xs font-medium",
-                trendUp ? "text-success" : "text-destructive"
+                "mt-1 text-sm",
+                trend.value >= 0 ? "text-success" : "text-destructive"
               )}
             >
-              {trendUp ? "+" : "-"}
-              {trend}% from yesterday
+              {trend.value >= 0 ? "+" : ""}
+              {trend.value}% {trend.label}
             </p>
           )}
         </div>
 
-        {Icon && (
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
-            <Icon className="h-5 w-5 text-primary" />
-          </div>
-        )}
+        <div
+          className={cn(
+            "flex h-12 w-12 items-center justify-center rounded-lg",
+            iconStyles[variant]
+          )}
+        >
+          <Icon className="h-6 w-6" />
+        </div>
       </div>
     </div>
-  );
+  )
 }

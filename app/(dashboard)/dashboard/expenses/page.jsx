@@ -1,121 +1,114 @@
-"use client";
+import { createClient } from "@/lib/supabase/server"
+import { Header } from "@/components/dashboard/header"
+import { ExpenseForm } from "@/components/expenses/expense-form"
+import { ExpensesOverview } from "@/components/expenses/expenses-overview"
+import { ExpensesTable } from "@/components/expenses/expenses-table"
 
-import { useState, useEffect } from "react";
-import ExpenseForm from "@/components/expenses/expense-form";
-import ExpensesOverview from "@/components/expenses/expenses-overview";
-import ExpensesTable from "@/components/expenses/expenses-table";
+export default async function ExpensesPage() {
+  const supabase = await createClient()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
 
-export default function ExpensesPage() {
-  const [expenses, setExpenses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [monthlyRevenue, setMonthlyRevenue] = useState(0);
+  // Get shop for user
+  const { data: shop } = await supabase
+    .from("shops")
+    .select("*")
+    .eq("user_id", user?.id)
+    .single()
 
-  useEffect(() => {
-    fetchExpenses();
-    fetchRevenue();
-  }, []);
+  let expenses = []
+  let totalRevenue = 0
 
-  async function fetchExpenses() {
-    try {
-      const res = await fetch("/api/expenses");
-      const data = await res.json();
-      setExpenses(data);
-    } catch (error) {
-      console.error("Error fetching expenses:", error);
-    } finally {
-      setLoading(false);
+  if (shop?.id) {
+    const { data: expensesData } = await supabase
+      .from("expenses")
+      .select("*")
+      .eq("shop_id", shop.id)
+      .order("date", { ascending: false })
+
+    if (expensesData) {
+      expenses = expensesData
+    }
+
+    // Get total revenue for profit calculation
+    const { data: transactions } = await supabase
+      .from("transactions")
+      .select("total_amount")
+      .eq("shop_id", shop.id)
+      .eq("status", "success")
+
+    if (transactions) {
+      totalRevenue = transactions.reduce(
+        (sum, t) => sum + Number(t.total_amount),
+        0
+      )
     }
   }
 
-  async function fetchRevenue() {
-    try {
-      const res = await fetch("/api/dashboard");
-      const data = await res.json();
-      setMonthlyRevenue(data.monthlyRevenue || 0);
-    } catch (error) {
-      console.error("Error fetching revenue:", error);
-    }
-  }
-
-  async function handleAddExpense(expenseData) {
-    try {
-      const res = await fetch("/api/expenses", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(expenseData),
-      });
-
-      if (res.ok) {
-        fetchExpenses();
-      }
-    } catch (error) {
-      console.error("Error adding expense:", error);
-    }
-  }
-
-  async function handleDeleteExpense(id) {
-    try {
-      const res = await fetch(`/api/expenses?id=${id}`, {
-        method: "DELETE",
-      });
-
-      if (res.ok) {
-        fetchExpenses();
-      }
-    } catch (error) {
-      console.error("Error deleting expense:", error);
-    }
-  }
-
-  const now = new Date();
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-
-  const monthlyExpenses = expenses.filter(
-    (e) => new Date(e.date) >= monthStart
-  );
-
-  const totalMonthlyExpenses = monthlyExpenses.reduce(
-    (sum, e) => sum + e.amount,
-    0
-  );
-
+  // Calculate expense stats
   const totalExpenses = expenses.reduce(
-    (sum, e) => sum + e.amount,
+    (sum, e) => sum + Number(e.amount),
     0
-  );
+  )
+
+  const thisMonthExpenses = expenses
+    .filter((e) => {
+      const expenseDate = new Date(e.date)
+      const now = new Date()
+      return (
+        expenseDate.getMonth() === now.getMonth() &&
+        expenseDate.getFullYear() === now.getFullYear()
+      )
+    })
+    .reduce((sum, e) => sum + Number(e.amount), 0)
+
+  const profit = totalRevenue - totalExpenses
+
+  // Category-wise breakdown
+  const categoryBreakdown = expenses.reduce((acc, expense) => {
+    acc[expense.category] =
+      (acc[expense.category] || 0) + Number(expense.amount)
+    return acc
+  }, {})
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">Expenses</h1>
-        <p className="text-muted-foreground">
-          Track and manage your business expenses
-        </p>
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        {/* Expense Form */}
-        <div className="lg:col-span-1">
-          <ExpenseForm onSubmit={handleAddExpense} />
-        </div>
-
-        {/* Overview */}
-        <div className="lg:col-span-2">
-          <ExpensesOverview
-            totalExpenses={totalExpenses}
-            monthlyExpenses={totalMonthlyExpenses}
-            monthlyRevenue={monthlyRevenue}
-            expenses={monthlyExpenses}
-          />
-        </div>
-      </div>
-
-      {/* Expenses Table */}
-      <ExpensesTable
-        expenses={expenses}
-        loading={loading}
-        onDelete={handleDeleteExpense}
+    <div className="flex flex-col">
+      <Header
+        title="Expenses"
+        description="Track and manage your business expenses"
+        userEmail={user?.email}
       />
+
+      <div className="space-y-6 p-6">
+        <div className="grid gap-6 lg:grid-cols-5">
+          {/* Left Panel - Add Expense Form */}
+          <div className="lg:col-span-2">
+            <ExpenseForm shopId={shop?.id} />
+          </div>
+
+          {/* Right Panel - Overview */}
+          <div className="lg:col-span-3">
+            <ExpensesOverview
+              totalExpenses={totalExpenses}
+              thisMonthExpenses={thisMonthExpenses}
+              totalRevenue={totalRevenue}
+              profit={profit}
+              categoryBreakdown={categoryBreakdown}
+            />
+          </div>
+        </div>
+
+        {/* Expenses Table */}
+        <div className="rounded-xl border border-border bg-card">
+          <div className="border-b border-border p-4">
+            <h2 className="text-lg font-semibold text-card-foreground">
+              Expense History
+            </h2>
+          </div>
+          <ExpensesTable expenses={expenses} />
+        </div>
+      </div>
     </div>
-  );
+  )
 }

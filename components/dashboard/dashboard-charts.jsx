@@ -1,12 +1,6 @@
-"use client";
+"use client"
 
-import {
-  Card,
-  CardContent,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import {
   AreaChart,
   Area,
@@ -15,7 +9,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
-} from "recharts";
+} from "recharts"
 
 const data = [
   { name: "Jan", revenue: 4000 },
@@ -30,7 +24,7 @@ const data = [
   { name: "Oct", revenue: 7500 },
   { name: "Nov", revenue: 9000 },
   { name: "Dec", revenue: 8500 },
-];
+]
 
 export function DashboardCharts() {
   return (
@@ -47,13 +41,7 @@ export function DashboardCharts() {
               margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
             >
               <defs>
-                <linearGradient
-                  id="colorRevenue"
-                  x1="0"
-                  y1="0"
-                  x2="0"
-                  y2="1"
-                >
+                <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
                   <stop
                     offset="5%"
                     stopColor="oklch(0.55 0.2 270)"
@@ -90,10 +78,7 @@ export function DashboardCharts() {
                   border: "1px solid oklch(0.92 0.005 260)",
                   borderRadius: "8px",
                 }}
-                formatter={(value) => [
-                  `₹${Number(value).toLocaleString()}`,
-                  "Revenue",
-                ]}
+                formatter={(value) => [`₹${value.toLocaleString()}`, "Revenue"]}
               />
 
               <Area
@@ -101,13 +86,13 @@ export function DashboardCharts() {
                 dataKey="revenue"
                 stroke="oklch(0.55 0.2 270)"
                 strokeWidth={2}
-                fill="url(#colorRevenue)"
                 fillOpacity={1}
+                fill="url(#colorRevenue)"
               />
             </AreaChart>
           </ResponsiveContainer>
         </div>
       </CardContent>
     </Card>
-  );
+  )
 }

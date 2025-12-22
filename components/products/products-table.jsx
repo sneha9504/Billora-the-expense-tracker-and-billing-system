@@ -1,151 +1,386 @@
 "use client"
 
 import { useState } from "react"
-import { Edit, Trash2, MoreHorizontal } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
+import {
+  Search,
+  Filter,
+  Edit,
+  Trash2,
+  MoreHorizontal,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react"
+import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import EditProductDialog from "@/components/products/edit-product-dialog"
-import DeleteProductDialog from "@/components/products/delete-product-dialog"
-import { formatCurrency } from "@/lib/utils"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { EditProductDialog } from "./edit-product-dialog"
+import { DeleteProductDialog } from "./delete-product-dialog"
+import { cn } from "@/lib/utils"
 
-export default function ProductsTable({ products, loading, onRefresh }) {
+export function ProductsTable({ products, shopId, categories }) {
+  const [search, setSearch] = useState("")
+  const [categoryFilter, setCategoryFilter] = useState("all")
+  const [stockFilter, setStockFilter] = useState("all")
+  const [currentPage, setCurrentPage] = useState(1)
   const [editProduct, setEditProduct] = useState(null)
   const [deleteProduct, setDeleteProduct] = useState(null)
 
-  function getStockStatus(product) {
-    if (product.stock === 0) {
-      return { label: "Out of Stock", variant: "destructive" }
-    }
-    if (product.stock <= product.lowStockThreshold) {
-      return { label: "Low Stock", variant: "warning" }
-    }
-    return { label: "In Stock", variant: "success" }
-  }
+  const itemsPerPage = 10
 
-  if (loading) {
-    return (
-      <Card>
-        <CardContent className="flex h-64 items-center justify-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        </CardContent>
-      </Card>
-    )
+  // Filter products
+  const filteredProducts = products.filter((product) => {
+    const matchesSearch =
+      product.name.toLowerCase().includes(search.toLowerCase()) ||
+      product.sku?.toLowerCase().includes(search.toLowerCase()) ||
+      product.category.toLowerCase().includes(search.toLowerCase())
+
+    const matchesCategory =
+      categoryFilter === "all" || product.category === categoryFilter
+
+    let matchesStock = true
+    if (stockFilter === "in-stock")
+      matchesStock = product.stock > product.reorder_level
+    else if (stockFilter === "low-stock")
+      matchesStock =
+        product.stock <= product.reorder_level && product.stock > 0
+    else if (stockFilter === "out-of-stock")
+      matchesStock = product.stock === 0
+
+    return matchesSearch && matchesCategory && matchesStock
+  })
+
+  // Pagination
+  const totalPages = Math.ceil(filteredProducts.length / itemsPerPage)
+  const paginatedProducts = filteredProducts.slice(
+    (currentPage - 1) * itemsPerPage,
+    currentPage * itemsPerPage
+  )
+
+  // Unique categories
+  const productCategories = [...new Set(products.map((p) => p.category))]
+
+  const getStockStatus = (stock, reorderLevel) => {
+    if (stock === 0)
+      return { label: "Out of Stock", variant: "destructive" }
+    if (stock <= reorderLevel)
+      return { label: "Low Stock", variant: "outline" }
+    return { label: "In Stock", variant: "default" }
   }
 
   return (
-    <>
-      <Card>
-        <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Product</TableHead>
-                <TableHead>SKU</TableHead>
-                <TableHead>Category</TableHead>
-                <TableHead className="text-right">Price</TableHead>
-                <TableHead className="text-right">Cost</TableHead>
-                <TableHead className="text-right">Stock</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {products.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={8} className="h-32 text-center text-muted-foreground">
-                    No products found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                products.map((product) => {
-                  const status = getStockStatus(product)
-                  return (
-                    <TableRow key={product._id}>
-                      <TableCell>
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-muted text-lg font-semibold">
-                            {product.name?.charAt(0)}
-                          </div>
-                          <div>
-                            <p className="font-medium">{product.name}</p>
-                            {product.description && (
-                              <p className="text-xs text-muted-foreground line-clamp-1">{product.description}</p>
-                            )}
-                          </div>
+    <div>
+      {/* Filters */}
+      <div className="flex flex-col sm:flex-row gap-4 p-4 border-b border-border">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            placeholder="Search by name, SKU, or category..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value)
+              setCurrentPage(1)
+            }}
+            className="pl-9"
+          />
+        </div>
+
+        <div className="flex gap-2">
+          <Select
+            value={categoryFilter}
+            onValueChange={(value) => {
+              setCategoryFilter(value)
+              setCurrentPage(1)
+            }}
+          >
+            <SelectTrigger className="w-[150px]">
+              <Filter className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Categories</SelectItem>
+              {productCategories.map((cat) => (
+                <SelectItem key={cat} value={cat}>
+                  {cat}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select
+            value={stockFilter}
+            onValueChange={(value) => {
+              setStockFilter(value)
+              setCurrentPage(1)
+            }}
+          >
+            <SelectTrigger className="w-[150px]">
+              <SelectValue placeholder="Stock Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Status</SelectItem>
+              <SelectItem value="in-stock">In Stock</SelectItem>
+              <SelectItem value="low-stock">Low Stock</SelectItem>
+              <SelectItem value="out-of-stock">Out of Stock</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {/* Table */}
+      <div className="overflow-x-auto">
+        <table className="w-full">
+          <thead className="bg-muted/50">
+            <tr>
+              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                Sr.
+              </th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                Product
+              </th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                SKU
+              </th>
+              <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">
+                Category
+              </th>
+              <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
+                Stock
+              </th>
+              <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
+                Price
+              </th>
+              <th className="px-4 py-3 text-right text-sm font-medium text-muted-foreground">
+                Value
+              </th>
+              <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">
+                Status
+              </th>
+              <th className="px-4 py-3 text-center text-sm font-medium text-muted-foreground">
+                Actions
+              </th>
+            </tr>
+          </thead>
+
+          <tbody>
+            {paginatedProducts.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={9}
+                  className="px-4 py-12 text-center text-muted-foreground"
+                >
+                  {products.length === 0
+                    ? "No products yet. Add your first product!"
+                    : "No products match your filters"}
+                </td>
+              </tr>
+            ) : (
+              paginatedProducts.map((product, index) => {
+                const status = getStockStatus(
+                  product.stock,
+                  product.reorder_level
+                )
+
+                return (
+                  <tr
+                    key={product.id}
+                    className={cn(
+                      "border-b border-border hover:bg-muted/50 transition-colors",
+                      index % 2 === 0 && "bg-muted/20"
+                    )}
+                  >
+                    <td className="px-4 py-3 text-sm text-muted-foreground">
+                      {(currentPage - 1) * itemsPerPage + index + 1}
+                    </td>
+
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-3">
+                        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10 text-primary font-medium text-xs">
+                          {product.image ? (
+                            <img
+                              src={product.image || "/placeholder.svg"}
+                              alt={product.name}
+                              className="h-full w-full object-cover rounded-lg"
+                            />
+                          ) : (
+                            product.name
+                              .substring(0, 2)
+                              .toUpperCase()
+                          )}
                         </div>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">{product.sku}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">{product.category}</Badge>
-                      </TableCell>
-                      <TableCell className="text-right font-medium">{formatCurrency(product.price)}</TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        {formatCurrency(product.costPrice)}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">{product.stock}</TableCell>
-                      <TableCell>
-                        <Badge
-                          className={
-                            status.variant === "success"
-                              ? "bg-success/10 text-success hover:bg-success/20"
-                              : status.variant === "warning"
-                                ? "bg-warning/10 text-warning hover:bg-warning/20"
-                                : "bg-destructive/10 text-destructive hover:bg-destructive/20"
-                          }
-                        >
-                          {status.label}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => setEditProduct(product)}>
-                              <Edit className="mr-2 h-4 w-4" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem className="text-destructive" onClick={() => setDeleteProduct(product)}>
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })
-              )}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
+                        <div>
+                          <p className="font-medium text-card-foreground">
+                            {product.name}
+                          </p>
+                          {product.brand && (
+                            <p className="text-xs text-muted-foreground">
+                              {product.brand}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    </td>
 
-      <EditProductDialog
-        product={editProduct}
-        open={!!editProduct}
-        onOpenChange={(open) => !open && setEditProduct(null)}
-        onSuccess={() => {
-          setEditProduct(null)
-          onRefresh()
-        }}
-      />
+                    <td className="px-4 py-3 text-sm text-muted-foreground font-mono">
+                      {product.sku || "-"}
+                    </td>
 
-      <DeleteProductDialog
-        product={deleteProduct}
-        open={!!deleteProduct}
-        onOpenChange={(open) => !open && setDeleteProduct(null)}
-        onSuccess={() => {
-          setDeleteProduct(null)
-          onRefresh()
-        }}
-      />
-    </>
+                    <td className="px-4 py-3">
+                      <Badge variant="secondary">
+                        {product.category}
+                      </Badge>
+                    </td>
+
+                    <td className="px-4 py-3 text-right text-sm">
+                      <span
+                        className={cn(
+                          "font-medium",
+                          product.stock === 0 &&
+                            "text-destructive",
+                          product.stock <=
+                            product.reorder_level &&
+                            product.stock > 0 &&
+                            "text-warning"
+                        )}
+                      >
+                        {product.stock}
+                      </span>
+                      <span className="text-muted-foreground ml-1">
+                        {product.unit}
+                      </span>
+                    </td>
+
+                    <td className="px-4 py-3 text-right text-sm font-medium">
+                      ₹{product.price.toLocaleString()}
+                    </td>
+
+                    <td className="px-4 py-3 text-right text-sm font-medium">
+                      ₹
+                      {(product.price * product.stock).toLocaleString()}
+                    </td>
+
+                    <td className="px-4 py-3 text-center">
+                      <Badge variant={status.variant}>
+                        {status.label}
+                      </Badge>
+                    </td>
+
+                    <td className="px-4 py-3 text-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8"
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() =>
+                              setEditProduct(product)
+                            }
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              setDeleteProduct(product)
+                            }
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </td>
+                  </tr>
+                )
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Pagination */}
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between px-4 py-3 border-t border-border">
+          <p className="text-sm text-muted-foreground">
+            Showing {(currentPage - 1) * itemsPerPage + 1} to{" "}
+            {Math.min(
+              currentPage * itemsPerPage,
+              filteredProducts.length
+            )}{" "}
+            of {filteredProducts.length} products
+          </p>
+
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setCurrentPage(currentPage - 1)
+              }
+              disabled={currentPage === 1}
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+
+            <span className="text-sm text-muted-foreground">
+              Page {currentPage} of {totalPages}
+            </span>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                setCurrentPage(currentPage + 1)
+              }
+              disabled={currentPage === totalPages}
+            >
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {/* Dialogs */}
+      {editProduct && (
+        <EditProductDialog
+          product={editProduct}
+          shopId={shopId}
+          categories={categories}
+          open={!!editProduct}
+          onOpenChange={(open) =>
+            !open && setEditProduct(null)
+          }
+        />
+      )}
+
+      {deleteProduct && (
+        <DeleteProductDialog
+          product={deleteProduct}
+          open={!!deleteProduct}
+          onOpenChange={(open) =>
+            !open && setDeleteProduct(null)
+          }
+        />
+      )}
+    </div>
   )
 }

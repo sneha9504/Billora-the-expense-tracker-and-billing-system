@@ -1,6 +1,8 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
+"use client"
+
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { format } from "date-fns"
 
 export function RecentTransactions({ transactions }) {
   const statusVariants = {
@@ -8,7 +10,7 @@ export function RecentTransactions({ transactions }) {
     pending: "secondary",
     delayed: "outline",
     failed: "destructive",
-  };
+  }
 
   return (
     <Card>
@@ -18,7 +20,7 @@ export function RecentTransactions({ transactions }) {
 
       <CardContent>
         {transactions.length === 0 ? (
-          <p className="text-sm text-muted-foreground text-center py-8">
+          <p className="py-8 text-center text-sm text-muted-foreground">
             No transactions yet
           </p>
         ) : (
@@ -26,10 +28,10 @@ export function RecentTransactions({ transactions }) {
             {transactions.map((transaction) => (
               <div
                 key={transaction.id}
-                className="flex items-center justify-between py-2 border-b border-border last:border-0"
+                className="flex items-center justify-between border-b border-border py-2 last:border-0"
               >
                 <div className="flex items-center gap-4">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary font-medium text-sm">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
                     {transaction.invoice_number.slice(-3)}
                   </div>
 
@@ -38,10 +40,7 @@ export function RecentTransactions({ transactions }) {
                       {transaction.customer_name || "Walk-in Customer"}
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      {format(
-                        new Date(transaction.created_at),
-                        "dd/MM/yyyy"
-                      )}
+                      {format(new Date(transaction.created_at), "dd/MM/yyyy")}
                     </p>
                   </div>
                 </div>
@@ -50,11 +49,8 @@ export function RecentTransactions({ transactions }) {
                   <p className="font-semibold text-card-foreground">
                     ₹{Number(transaction.total_amount).toLocaleString()}
                   </p>
-
                   <Badge
-                    variant={
-                      statusVariants[transaction.status] || "default"
-                    }
+                    variant={statusVariants[transaction.status] || "default"}
                     className="capitalize"
                   >
                     {transaction.status}
@@ -66,5 +62,5 @@ export function RecentTransactions({ transactions }) {
         )}
       </CardContent>
     </Card>
-  );
+  )
 }

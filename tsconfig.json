@@ -34,7 +34,7 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     ".next/dev/types/**/*.ts"
-, "components/ui/use-toast.js", "hooks/use-mobile.js", "hooks/use-toast.js"  ],
+, "components/ui/use-toast.js", "hooks/use-mobile.js", "hooks/use-toast.js", "lib/supabase/client.js", "lib/supabase/proxy.js", "lib/supabase/server.js", "lib/types.js", "lib/utils.js"  ],
   "exclude": [
     "node_modules"
   ]

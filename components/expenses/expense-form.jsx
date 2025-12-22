@@ -1,65 +1,105 @@
 "use client"
 
 import { useState } from "react"
-import { Plus, Calendar } from "lucide-react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useRouter } from "next/navigation"
+import { Loader2, Plus } from "lucide-react"
+import { toast } from "sonner"
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Switch } from "@/components/ui/switch"
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Calendar as CalendarComponent } from "@/components/ui/calendar"
-import { formatDate } from "@/lib/utils"
+import { createClient } from "@/lib/supabase/client"
 
 const expenseCategories = [
-  { value: "rent", label: "Rent", color: "bg-chart-1" },
-  { value: "utilities", label: "Utilities", color: "bg-chart-2" },
-  { value: "salaries", label: "Salaries", color: "bg-chart-3" },
-  { value: "inventory", label: "Inventory", color: "bg-chart-4" },
-  { value: "marketing", label: "Marketing", color: "bg-chart-5" },
-  { value: "maintenance", label: "Maintenance", color: "bg-primary" },
-  { value: "transport", label: "Transport", color: "bg-success" },
-  { value: "other", label: "Other", color: "bg-muted-foreground" },
+  "Rent",
+  "Electricity",
+  "Staff Salary",
+  "Inventory Purchase",
+  "Transportation",
+  "Marketing",
+  "Maintenance",
+  "Internet & Phone",
+  "Insurance",
+  "Taxes",
+  "Supplies",
+  "Other",
 ]
 
-const paymentModes = ["cash", "card", "upi", "bank_transfer", "cheque"]
-
-export default function ExpenseForm({ onSubmit }) {
+export function ExpenseForm({ shopId }) {
   const [loading, setLoading] = useState(false)
+  const router = useRouter()
+
   const [formData, setFormData] = useState({
-    title: "",
-    amount: "",
     category: "",
+    amount: "",
+    vendor: "",
+    payment_mode: "cash",
     description: "",
-    date: new Date(),
-    paymentMode: "cash",
-    isRecurring: false,
-    recurringFrequency: "monthly",
+    date: new Date().toISOString().split("T")[0],
+    is_recurring: false,
+    recurring_frequency: "",
   })
 
-  async function handleSubmit(e) {
+  const handleSubmit = async (e) => {
     e.preventDefault()
-    setLoading(true)
 
-    try {
-      await onSubmit(formData)
-      setFormData({
-        title: "",
-        amount: "",
-        category: "",
-        description: "",
-        date: new Date(),
-        paymentMode: "cash",
-        isRecurring: false,
-        recurringFrequency: "monthly",
-      })
-    } catch (error) {
-      console.error("Error submitting expense:", error)
-    } finally {
-      setLoading(false)
+    if (!shopId) {
+      toast.error("Please set up your shop first in Settings")
+      return
     }
+
+    setLoading(true)
+    const supabase = createClient()
+
+    const { error } = await supabase.from("expenses").insert({
+      shop_id: shopId,
+      category: formData.category,
+      amount: Number.parseFloat(formData.amount),
+      vendor: formData.vendor || null,
+      payment_mode: formData.payment_mode,
+      description: formData.description || null,
+      date: formData.date,
+      is_recurring: formData.is_recurring,
+      recurring_frequency: formData.is_recurring
+        ? formData.recurring_frequency
+        : null,
+    })
+
+    if (error) {
+      toast.error(error.message)
+      setLoading(false)
+      return
+    }
+
+    toast.success("Expense added successfully!")
+    setFormData({
+      category: "",
+      amount: "",
+      vendor: "",
+      payment_mode: "cash",
+      description: "",
+      date: new Date().toISOString().split("T")[0],
+      is_recurring: false,
+      recurring_frequency: "",
+    })
+
+    router.refresh()
+    setLoading(false)
   }
 
   return (
@@ -69,127 +109,148 @@ export default function ExpenseForm({ onSubmit }) {
           <Plus className="h-5 w-5" />
           Add Expense
         </CardTitle>
+        <CardDescription>
+          Record a new business expense
+        </CardDescription>
       </CardHeader>
+
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="title">Title *</Label>
-            <Input
-              id="title"
-              placeholder="Expense title"
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="amount">Amount *</Label>
-            <Input
-              id="amount"
-              type="number"
-              step="0.01"
-              placeholder="0.00"
-              value={formData.amount}
-              onChange={(e) => setFormData({ ...formData, amount: e.target.value })}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
             <Label>Category *</Label>
-            <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
+            <Select
+              value={formData.category}
+              onValueChange={(value) =>
+                setFormData({ ...formData, category: value })
+              }
+              required
+            >
               <SelectTrigger>
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
                 {expenseCategories.map((cat) => (
-                  <SelectItem key={cat.value} value={cat.value}>
-                    <div className="flex items-center gap-2">
-                      <div className={`h-3 w-3 rounded-full ${cat.color}`} />
-                      {cat.label}
-                    </div>
+                  <SelectItem key={cat} value={cat}>
+                    {cat}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Amount (₹) *</Label>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.amount}
+              onChange={(e) =>
+                setFormData({ ...formData, amount: e.target.value })
+              }
+              placeholder="0.00"
+              required
+            />
           </div>
 
           <div className="space-y-2">
             <Label>Date *</Label>
-            <Popover>
-              <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-start text-left font-normal bg-transparent">
-                  <Calendar className="mr-2 h-4 w-4" />
-                  {formatDate(formData.date)}
-                </Button>
-              </PopoverTrigger>
-              <PopoverContent className="w-auto p-0" align="start">
-                <CalendarComponent
-                  mode="single"
-                  selected={formData.date}
-                  onSelect={(date) => setFormData({ ...formData, date: date || new Date() })}
-                  initialFocus
-                />
-              </PopoverContent>
-            </Popover>
+            <Input
+              type="date"
+              value={formData.date}
+              onChange={(e) =>
+                setFormData({ ...formData, date: e.target.value })
+              }
+              required
+            />
           </div>
 
           <div className="space-y-2">
             <Label>Payment Mode</Label>
-            <Select value={formData.paymentMode} onValueChange={(v) => setFormData({ ...formData, paymentMode: v })}>
+            <Select
+              value={formData.payment_mode}
+              onValueChange={(value) =>
+                setFormData({ ...formData, payment_mode: value })
+              }
+            >
               <SelectTrigger>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {paymentModes.map((mode) => (
-                  <SelectItem key={mode} value={mode} className="capitalize">
-                    {mode.replace("_", " ")}
-                  </SelectItem>
-                ))}
+                <SelectItem value="cash">Cash</SelectItem>
+                <SelectItem value="card">Card</SelectItem>
+                <SelectItem value="upi">UPI</SelectItem>
+                <SelectItem value="bank_transfer">
+                  Bank Transfer
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="description">Description</Label>
+            <Label>Vendor / Payee</Label>
+            <Input
+              value={formData.vendor}
+              onChange={(e) =>
+                setFormData({ ...formData, vendor: e.target.value })
+              }
+              placeholder="e.g. ABC Supplies"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label>Notes</Label>
             <Textarea
-              id="description"
-              placeholder="Optional description"
               value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              onChange={(e) =>
+                setFormData({
+                  ...formData,
+                  description: e.target.value,
+                })
+              }
+              placeholder="Additional details..."
               rows={2}
             />
           </div>
 
           <div className="flex items-center justify-between rounded-lg border p-3">
             <div>
-              <Label htmlFor="recurring" className="font-medium">
+              <Label className="font-medium">
                 Recurring Expense
               </Label>
-              <p className="text-xs text-muted-foreground">This expense repeats regularly</p>
+              <p className="text-xs text-muted-foreground">
+                Mark if this repeats regularly
+              </p>
             </div>
             <Switch
-              id="recurring"
-              checked={formData.isRecurring}
-              onCheckedChange={(checked) => setFormData({ ...formData, isRecurring: checked })}
+              checked={formData.is_recurring}
+              onCheckedChange={(checked) =>
+                setFormData({
+                  ...formData,
+                  is_recurring: checked,
+                })
+              }
             />
           </div>
 
-          {formData.isRecurring && (
+          {formData.is_recurring && (
             <div className="space-y-2">
               <Label>Frequency</Label>
               <Select
-                value={formData.recurringFrequency}
-                onValueChange={(v) => setFormData({ ...formData, recurringFrequency: v })}
+                value={formData.recurring_frequency}
+                onValueChange={(value) =>
+                  setFormData({
+                    ...formData,
+                    recurring_frequency: value,
+                  })
+                }
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Select frequency" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="weekly">Weekly</SelectItem>
                   <SelectItem value="monthly">Monthly</SelectItem>
-                  <SelectItem value="quarterly">Quarterly</SelectItem>
                   <SelectItem value="yearly">Yearly</SelectItem>
                 </SelectContent>
               </Select>
@@ -197,7 +258,10 @@ export default function ExpenseForm({ onSubmit }) {
           )}
 
           <Button type="submit" className="w-full" disabled={loading}>
-            {loading ? "Adding..." : "Add Expense"}
+            {loading && (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            )}
+            Add Expense
           </Button>
         </form>
       </CardContent>
